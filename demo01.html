@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
@@ -9,104 +9,113 @@
 
 <body>
     <div id="app">
-        <!-- message数据绑定到app.message -->
+        <!-- 数据绑定 -->
         {{ message }}
     </div>
-
-    <div id="app-2">
-        <!-- span元素的title属性被赋值app2.message-->
-        <span v-bind:title="message">
-            Hover your mouse over me for a few seconds to see my dynamically bound title!
-        </span>
-    </div>
-
-    <div id="app-3">
-        <p v-if="seen">Now you see me</p>
-    </div>
-
-    <div id="app-4">
-        <ol>
-            <li v-for="todo in todos">
-                {{ todo.text }}
-            </li>
-        </ol>
-    </div>
-
-    <div id="app-5">
-        <p>{{ message }}</p>
-        <button v-on:click="reverseMessage">Reverse Message</button>
-    </div>
-
-    <div id="app-6">
-        <p>{{ message }}</p>
-        <input v-model="message">
-    </div>
-
-    <div id="app-7">
-        <ol>
-            <!-- 这里的todo-item是vue定义的component，将item绑定到props的todo上 -->
-            <todo-item v-for="item in groceryList" v-bind:todo="item"></todo-item>
-        </ol>
-    </div>
-
     <script>
-        // 在控制台修改 app.message
+        // 可在控制台修改 app.message
         var app = new Vue({
-            // Vue 实例 app 绑定到 #app element
+            // Vue 实例 app 绑定到 #app DOM
             el: '#app',
             data: {
                 // app.message
                 message: 'Hello Vue!'
             }
         })
+    </script>
 
+    <div id="app-2">
+        <!-- HTML属性中的数据绑定 -->
+        <span v-bind:title="message">
+            Hover your mouse over me for a few seconds to see my dynamically bound title!
+        </span>
+    </div>
+    <script>
         var app2 = new Vue({
             el: '#app-2',
             data: {
                 message: 'You loaded this page on ' + new Date()
             }
         })
+    </script>
 
+    <div id="app-3">
+        <!--条件判断，不为真则无此DOM-->
+        <p v-if="seen">Now you see me</p>
+    </div>
+    <script>
         var app3 = new Vue({
             el: '#app-3',
             data: {
                 seen: true
             }
         })
+    </script>
 
+    <div id="app-4">
+        <ol>
+            <!--循环遍历-->
+            <li v-for="todo in todos">
+                {{ todo.text }}
+            </li>
+        </ol>
+    </div>
+    <script>
         var app4 = new Vue({
             el: '#app-4',
             data: {
-                todos: [
-                    { text: 'Learn JavaScript' },
-                    { text: 'Learn Vue' },
-                    { text: 'Build something awesome' }
-                ]
+                todos: [{
+                    text: 'Learn JavaScript'
+                }, {
+                    text: 'Learn Vue'
+                }, {
+                    text: 'Build something awesome'
+                }]
             }
         })
+    </script>
 
+    <div id="app-5">
+        <p>{{ message }}</p>
+        <!--事件绑定-->
+        <button v-on:click="reverseMessage">Reverse Message</button>
+    </div>
+    <script>
         var app5 = new Vue({
             el: '#app-5',
             data: {
                 message: 'Hello Vue.js!'
             },
             methods: {
-                reverseMessage: function () {
+                reverseMessage: function() {
                     this.message = this.message.split('').reverse().join('')
                 }
             }
         })
+    </script>
 
+    <div id="app-6">
+        <p>{{ message }}</p>
+        <!--双向绑定-->
+        <input v-model="message">
+    </div>
+    <script>
         var app6 = new Vue({
             el: '#app-6',
             data: {
                 message: 'Hello Vue!'
             }
         })
+    </script>
 
-        /**
-         * 定义todo-item组件，数据从props中的todo传递
-        */
+    <div id="app-7">
+        <ol>
+            <!--compon组件-->
+            <todo-item v-for="item in groceryList" v-bind:todo="item"></todo-item>
+        </ol>
+    </div>
+    <script>
+        // 定义组件名：todo-item；props属性：todo；模板：<li>{{ todo.text }}</li>
         Vue.component('todo-item', {
             props: ['todo'],
             template: '<li>{{ todo.text }}</li>'
@@ -114,11 +123,13 @@
         var app7 = new Vue({
             el: '#app-7',
             data: {
-                groceryList: [
-                    { text: 'Vegetables' },
-                    { text: 'Cheese' },
-                    { text: 'Whatever else humans are supposed to eat' }
-                ]
+                groceryList: [{
+                    text: 'Vegetables'
+                }, {
+                    text: 'Cheese'
+                }, {
+                    text: 'Whatever else humans are supposed to eat'
+                }]
             }
         })
     </script>
