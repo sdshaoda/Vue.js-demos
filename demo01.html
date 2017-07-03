@@ -8,7 +8,8 @@
 </head>
 
 <body>
-    <div id="app">
+    <!-- app.$el | app.$refs.container -->
+    <div id="app" ref="container">
         <!-- 数据绑定 -->
         {{ message }}
     </div>
@@ -16,16 +17,19 @@
         // 可在控制台修改 app.message
         var app = new Vue({
             // Vue 实例 app 绑定到 #app DOM
+            // app.$el
             el: '#app',
+            // app.$data
             data: {
-                // app.message
+                // app.message / app.$data.message
                 message: 'Hello Vue!'
             }
         })
     </script>
 
+
     <div id="app-2">
-        <!-- HTML属性中的数据绑定 -->
+        <!-- 绑定数据到HTML的属性上，'v-bind' 可简写为 ':' -->
         <span v-bind:title="message">
             Hover your mouse over me for a few seconds to see my dynamically bound title!
         </span>
@@ -39,22 +43,28 @@
         })
     </script>
 
+
     <div id="app-3">
-        <!--条件判断，不为真则无此DOM-->
-        <p v-if="seen">Now you see me</p>
+        <!-- 条件判断，不为真则不会渲染此 DOM -->
+        <p v-if="have">Now you see me</p>
+        <!-- 条件判断，不为真则会加上 'display: none;' 的内联样式 -->
+        <p v-show="seen">Now you see me</p>
     </div>
     <script>
         var app3 = new Vue({
             el: '#app-3',
             data: {
-                seen: true
+                have: false,
+                seen: false
             }
         })
     </script>
 
+
     <div id="app-4">
         <ol>
-            <!--循环遍历-->
+            <!-- 循环遍历 -->
+            <!-- 在组件中必须写 :key="" -->
             <li v-for="todo in todos">
                 {{ todo.text }}
             </li>
@@ -75,9 +85,10 @@
         })
     </script>
 
+
     <div id="app-5">
         <p>{{ message }}</p>
-        <!--事件绑定-->
+        <!-- 事件绑定，'v-on' 可简写为 '@' -->
         <button v-on:click="reverseMessage">Reverse Message</button>
     </div>
     <script>
@@ -94,9 +105,10 @@
         })
     </script>
 
+
     <div id="app-6">
         <p>{{ message }}</p>
-        <!--双向绑定-->
+        <!-- 双向绑定 -->
         <input v-model="message">
     </div>
     <script>
@@ -108,14 +120,15 @@
         })
     </script>
 
+
     <div id="app-7">
         <ol>
-            <!--compon组件-->
+            <!-- component组件 -->
             <todo-item v-for="item in groceryList" v-bind:todo="item"></todo-item>
         </ol>
     </div>
     <script>
-        // 定义组件名：todo-item；props属性：todo；模板：<li>{{ todo.text }}</li>
+        // 注册全局组件  组件名：todo-item；props属性：todo；组件内容：<li>{{ todo.text }}</li>
         Vue.component('todo-item', {
             props: ['todo'],
             template: '<li>{{ todo.text }}</li>'

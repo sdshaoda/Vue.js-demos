@@ -1,2 +1,3 @@
-# vue.js2-demos
-There are some vue.js 2 demos.
+# Vue.js-demos
+
+There are some Vue.js 2 demos.
