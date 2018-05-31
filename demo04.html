@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>demo04</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.4.0/lib/theme-chalk/index.css">
+</head>
+
+<body>
+    <!-- Element demo -->
+    <div id="app">
+        <el-button @click="visible = true">按钮</el-button>
+        <el-dialog :visible.sync="visible" title="Hello world">
+            <p>欢迎使用 Element</p>
+        </el-dialog>
+
+        <el-row>
+            <el-button>默认按钮</el-button>
+            <el-button type="primary">主要按钮</el-button>
+            <el-button type="success">成功按钮</el-button>
+            <el-button type="info">信息按钮</el-button>
+            <el-button type="warning">警告按钮</el-button>
+            <el-button type="danger">危险按钮</el-button>
+        </el-row>
+
+        <el-date-picker v-model="value1" type="datetime" placeholder="选择日期时间">
+        </el-date-picker>
+    </div>
+
+    <script src="https://unpkg.com/vue@2.5.16/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/element-ui@2.4.0/lib/index.js"></script>
+    <script>
+        // element 配置，设置组件默认大小为small，弹窗z-index为3000
+        Vue.use(ELEMENT, { size: 'small', zIndex: 3000 })
+        // OR
+        // Vue.prototype.$ELEMENT = { size: 'small', zIndex: 3000 }
+
+        var app = new Vue({
+            el: '#app',
+            data() {
+                return {
+                    visible: false,
+                    value1: new Date()
+                }
+            }
+        })
+
+        // 使用基础 Vue 构造器，创建一个子类构造器
+        // var Ctor = Vue.extend({
+        //     data() {
+        //         return {
+        //             visible: false,
+        //             value1: new Date()
+        //         }
+        //     }
+        // })
+        // 
+        // vm.$mount() 手动挂载
+        // var app = new Ctor().$mount('#app')
+    </script>
+</body>
+
+</html>
