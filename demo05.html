@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>分配供应商信息维护(新)</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/element-ui@2.4.0/lib/theme-chalk/index.css">
+  <style>
+    .cell {
+      color: #606266;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="app">
+    <el-row>
+      <el-col :span="20" :offset="2">
+        <el-card shadow="hover">
+
+          <div slot="header">分配供应商信息维护</div>
+
+          <el-form :inline="true" :model="queryForm" ref="queryForm">
+            <el-form-item label="规则类型">
+              <el-select v-model="queryForm.ruleType" filterable multiple placeholder="默认全部规则类型">
+                <el-option label="专款" value="special"></el-option>
+                <el-option label="热销" value="hot"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="供应商">
+              <el-select v-model="queryForm.providerId" filterable multiple placeholder="默认全部供应商">
+                <el-option v-for="provider in providers" :key="provider.provider_id" :label="provider.provider_code"
+                  :value="provider.provider_id"></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="商品ID" :rules="[{ type: 'number', message: '商品ID必须为数字值'}]">
+              <el-input v-model.number="queryForm.externalGoodsId" placeholder="商品ID" @keydown.enter.native="query"
+                clearable></el-input>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="query">查询</el-button>
+              <el-button type="primary" @click="add">新增</el-button>
+              <el-button type="primary" @click="exportExcel">导出</el-button>
+            </el-form-item>
+          </el-form>
+
+          <el-table :data="rules" :span-method="_spanMethod" stripe style="width: 100%">
+            <el-table-column prop="externalGoodsId" label="商品ID" sortable>
+            </el-table-column>
+            <el-table-column label="规则类型" sortable>
+              <template slot-scope="scope">
+                {{ scope.row.ruleType === 'special' ? '专款' : scope.row.ruleType === 'hot' ? '热销款' : '' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="providerId" label="供应商ID" sortable>
+            </el-table-column>
+            <el-table-column prop="providerCode" label="供应商码" sortable>
+            </el-table-column>
+            <el-table-column label="分配比例" sortable>
+              <template slot-scope="scope">
+                {{ scope.row.allocateRate ? scope.row.allocateRate + '%' : '' }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="createdStamp" label="更新时间" sortable min-width="150px">
+            </el-table-column>
+            <el-table-column label="操作">
+              <template slot-scope="scope">
+                <el-button @click="updateItem(scope.$index, scope.row)" type="text" size="small">修改
+                </el-button>
+                <el-button @click="deleteItem(scope.$index, scope.row)" type="text" size="small">删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-dialog :title="formTitle" :visible.sync="dialogVisible" width="520px">
+      <el-form :model="modalForm" ref="modalForm" label-position="right">
+        <el-form-item label="商品ID">
+          <el-input v-model="modalForm.externalGoodsId" placeholder="商品ID" clearable :disabled="updateRule"></el-input>
+        </el-form-item>
+        <el-form-item label="规则类型">
+          <el-select v-model="modalForm.ruleType" filterable placeholder="选择规则类型" :disabled="updateRule">
+            <el-option label="专款" value="special"></el-option>
+            <el-option label="热销" value="hot"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item v-for="(item, index) in modalForm.providerId" :label="'供应商' + (index+1)" :key="index">
+          <el-select v-model="item.value" filterable remote placeholder="选择供应商" :remote-method="query => {remoteMethod(query, index)}"
+            :loading="loading">
+            <el-option v-for="provider in providersFilter[index]" :key="provider.provider_id" :label="provider.provider_code"
+              :value="provider.provider_id"></el-option>
+          </el-select>
+          <el-input-number v-if="ruleType === 'hot' && updateRule" v-model="item.allocateRate"></el-input-number>
+          <el-button @click.prevent="removeProvider(item)">删除</el-button>
+        </el-form-item>
+      </el-form>
+
+      <div slot="footer" class="dialog-footer">
+        <el-button v-if="ruleType === 'hot'" @click="addProvider">新增供应商</el-button>
+        <el-button @click="resetModalForm">重置</el-button>
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="confirm">确 定</el-button>
+      </div>
+    </el-dialog>
+  </div>
+
+  <script src="https://unpkg.com/vue@2.5.16/dist/vue.min.js"></script>
+  <script src="https://unpkg.com/element-ui@2.4.0/lib/index.js"></script>
+  <script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+  <script>
+    const url = '/webapp/Controllers/alloc_provider_info.php'
+
+    axios.interceptors.response.use(function (res) {
+      // console.log(res)
+      if (typeof res.data === 'string') {
+        if (res.data.indexOf('进入管理中心') !== -1) {
+          res.data = {
+            code: 1,
+            msg: '请先登录！'
+          }
+        } else if (res.data.indexOf('您没有执行此项操作的权限') !== -1) {
+          res.data = {
+            code: 1,
+            msg: '缺少权限！'
+          }
+        } else if (res.data.indexOf('Database error') !== -1) {
+          res.data = {
+            code: 1,
+            msg: 'SQL error，请联系ERP组！'
+          }
+        } else {
+          res.data = {
+            code: 1,
+            msg: '其他错误！'
+          }
+        }
+      }
+      return res
+    }, function (error) {
+      console.error(error)
+      alert('axios error')
+      return Promise.reject(error)
+    })
+
+    Vue.use(ELEMENT, { size: 'small', zIndex: 3000 })
+
+    const app = new Vue({
+      el: '#app',
+      data() {
+        return {
+          queryForm: {
+            ruleType: '',
+            providerId: '',
+            externalGoodsId: ''
+          },
+          modalForm: {
+            ruleType: '',
+            providerId: [{
+              value: '',
+              allocateRate: ''
+            }],
+            externalGoodsId: ''
+          },
+          providers: [],
+          rules: [],
+          dialogVisible: false,
+          updateRule: false,
+          formTitle: '新增规则',
+          loading: false,
+          providersFilter: []
+        }
+      },
+      computed: {
+        ruleType() {
+          return this.modalForm.ruleType
+        }
+      },
+      watch: {
+        modalForm: {
+          deep: true,
+          handler(newModalForm) {
+            clearTimeout(this.timeout)
+            this.timeout = setTimeout(() => {
+              if (newModalForm.ruleType === 'hot') {
+                if (this.modalForm.providerId.length < 2) {
+                  this.$message.error('热销供应商不得少于2个！')
+                  return
+                }
+                let allocateRateSum = 0
+                let providerId = []
+                for (let i = 0, l = newModalForm.providerId.length; i < l; i++) {
+                  allocateRateSum += newModalForm.providerId[i].allocateRate
+                  providerId.push(newModalForm.providerId[i].value)
+                }
+                if (allocateRateSum > 100) {
+                  this.$message.error('分配比例之和不得大于100！')
+                }
+                for (let i = 0; i < providerId.length - 1; i++) {
+                  if (providerId[i] && providerId[i] == providerId[i + 1]) {
+                    this.$message.error('请勿选择相同的供应商！')
+                  }
+                }
+              }
+            }, 20)
+          }
+        },
+        ruleType(newRuleType, oldRuleType) {
+          if (newRuleType === 'special') {
+            this.modalForm.providerId.splice(1, 4)
+          } else if (newRuleType === 'hot') {
+            for (let i = this.modalForm.providerId.length; i < 5; i++) {
+              this.modalForm.providerId.push({
+                value: '',
+                allocateRate: ''
+              })
+            }
+          }
+        }
+      },
+      created() {
+        this._getProviders()
+        this.timeout = 0
+        this.queryTimeout = 0
+      },
+      methods: {
+        _getProviders() {
+          axios.post(url, {
+            act: 'getProvider'
+          }).then((res) => {
+            if (res.data.code) {
+              this.$message.error(res.data.msg)
+            } else {
+              this.providers = res.data.data
+            }
+          })
+        },
+        _spanMethod({ row, column, rowIndex, columnIndex }) {
+          if (row.ruleType === 'hot' && [0, 1, 6].indexOf(columnIndex) !== -1) {
+            if (rowIndex !== 0 && this.rules[rowIndex - 1].externalGoodsId === row.externalGoodsId && this.rules[rowIndex - 1].ruleType === 'hot') {
+              return {
+                rowspan: 0,
+                colspan: 0
+              }
+            } else if (rowIndex !== this.rules.length - 1) {
+              let rowSpan = 1
+              for (let i = rowIndex + 1, l = this.rules.length; i < l; i++) {
+                if (this.rules[i].externalGoodsId === row.externalGoodsId && this.rules[i].ruleType === 'hot') {
+                  rowSpan++
+                } else {
+                  break
+                }
+              }
+              return {
+                rowspan: rowSpan,
+                colspan: 1
+              }
+            }
+          }
+        },
+        remoteMethod(query, index) {
+          if (query !== '') {
+            this.loading = true
+            clearTimeout(this.queryTimeout)
+            this.queryTimeout = setTimeout(() => {
+              this.loading = false
+              this.providersFilter[index] = this.providers.filter((item) => {
+                return item.provider_code.toLowerCase().indexOf(query.toLowerCase()) > -1
+              })
+            }, 200)
+          } else {
+            this.providersFilter[index] = []
+          }
+        },
+        query() {
+          if (!this.queryForm.externalGoodsId && !this.queryForm.providerId.length) {
+            this.$message({
+              type: 'error',
+              message: '供应商和商品ID至少选择一项！',
+              showClose: true
+            })
+            return
+          }
+          axios.post(url, Object.assign(
+            { act: 'query' }, this.queryForm
+          )).then((res) => {
+            this.rules = res.data.data
+            if (!res.data.data.length) {
+              this.$message.warning('暂无数据')
+            }
+          })
+        },
+        addProvider() {
+          if (this.modalForm.providerId.length >= 5) {
+            this.$message.error('供应商不可多于5个！')
+            return
+          }
+          this.modalForm.providerId.push({
+            value: '',
+            key: Date.now()
+          })
+        },
+        removeProvider(item) {
+          const index = this.modalForm.providerId.indexOf(item)
+          if (index !== -1) {
+            this.modalForm.providerId.splice(index, 1)
+          }
+        },
+        resetModalForm() {
+          this.modalForm = {
+            ruleType: '',
+            providerId: [{
+              value: '',
+              allocateRate: ''
+            }],
+            externalGoodsId: ''
+          }
+          // this.$refs.modalForm.resetFields()
+        },
+        confirm() {
+          if (this.updateRule) {
+            axios.post(url, Object.assign(
+              { act: 'update' }, this.modalForm
+            )).then((res) => {
+              this.$message({
+                type: res.data.code ? 'error' : 'success',
+                message: res.data.msg
+              })
+              this.dialogVisible = false
+              this.query()
+            })
+          } else {
+            axios.post(url, Object.assign(
+              { act: 'add' }, this.modalForm
+            )).then((res) => {
+              this.$message({
+                type: res.data.code ? 'error' : 'success',
+                message: res.data.msg
+              })
+              this.dialogVisible = false
+              this.query()
+            })
+          }
+        },
+        add() {
+          this.formTitle = '新增规则'
+          this.updateRule = false
+          this.dialogVisible = true
+
+          this.resetModalForm()
+          this.providersFilter = []
+        },
+        exportExcel() {
+          window.open(url + '?act=export&query=' + JSON.stringify(this.queryForm))
+        },
+        updateItem(index, row) {
+          this.formTitle = '更新规则'
+          this.updateRule = true
+          this.dialogVisible = true
+
+          this.resetModalForm()
+          this.modalForm.externalGoodsId = row.externalGoodsId
+          this.modalForm.ruleType = row.ruleType
+          if (row.ruleType === 'special') {
+            this.modalForm.providerId[0].value = row.providerId
+            this.providersFilter[0] = this.providers.filter((item) => {
+              return item.provider_id == row.providerId
+            })
+          } else if (row.ruleType === 'hot') {
+            this.modalForm.providerId = []
+            for (let i = index, j = 0, l = this.rules.length; i < l; i++ , j++) {
+              if (this.rules[i].ruleType === 'hot' && this.rules[i].externalGoodsId === row.externalGoodsId) {
+                this.modalForm.providerId.push({
+                  value: this.rules[i].providerId,
+                  allocateRate: parseFloat(this.rules[i].allocateRate)
+                })
+                this.providersFilter[j] = this.providers.filter((item) => {
+                  return item.provider_id == this.rules[i].providerId
+                })
+              } else {
+                break
+              }
+            }
+            for (let i = this.modalForm.providerId.length; i < 5; i++) {
+              this.modalForm.providerId.push({
+                value: '',
+                allocateRate: ''
+              })
+              this.providersFilter[i] = []
+            }
+          }
+        },
+        deleteItem(index, row) {
+          this.$confirm('将删除此规则, 是否继续?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            axios.post(url, Object.assign({ act: 'delete' }, row))
+              .then((res) => {
+                this.$message({
+                  type: res.data.code ? 'error' : 'success',
+                  message: res.data.msg
+                })
+                this.query()
+              })
+          }).catch(() => {
+            this.$message({
+              type: 'info',
+              message: '已取消删除'
+            });
+          });
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>
