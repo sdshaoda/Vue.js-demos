@@ -4,13 +4,10 @@ const renderer = require('vue-server-renderer').createRenderer({
   template: require('fs').readFileSync('./index.template.html', 'utf-8')
 })
 
+const createApp = require('./app')
+
 server.get('*', (req, res) => {
-  const app = new Vue({
-    data: {
-      url: req.url
-    },
-    template: `<div>Hello Vue SSR! URL: {{ url }}</div>`
-  })
+  const app = createApp({ url: req.url })
 
   renderer.renderToString(app, { title: 'Vue SSR', meta: '' }).then(html => {
     res.end(html)
@@ -21,4 +18,6 @@ server.get('*', (req, res) => {
 
 })
 
-server.listen(8000)
+server.listen(8000, () => {
+  console.log(`Server running at http://127.0.0.1:8000/`);
+})
